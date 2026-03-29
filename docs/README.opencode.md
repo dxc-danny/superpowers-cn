@@ -1,10 +1,10 @@
-# Superpowers for OpenCode
+# OpenCode 超级能力
 
-Complete guide for using Superpowers with [OpenCode.ai](https://opencode.ai).
+将超级能力与 [OpenCode.ai](https://opencode.ai) 结合使用的完整指南。
 
-## Installation
+## 安装
 
-Add superpowers to the `plugin` array in your `opencode.json` (global or project-level):
+在 `opencode.json`（全局或项目级别）的 `plugin` 数组中添加 superpowers：
 
 ```json
 {
@@ -12,52 +12,52 @@ Add superpowers to the `plugin` array in your `opencode.json` (global or project
 }
 ```
 
-Restart OpenCode. The plugin auto-installs via Bun and registers all skills automatically.
+重启 OpenCode。插件通过 Bun 自动安装并自动注册所有技能。
 
-Verify by asking: "Tell me about your superpowers"
+验证方法：询问 "Tell me about your superpowers"
 
-### Migrating from the old symlink-based install
+### 从旧的基于符号链接的安装迁移
 
-If you previously installed superpowers using `git clone` and symlinks, remove the old setup:
+如果你之前使用 `git clone` 和符号链接安装了 superpowers，请删除旧设置：
 
 ```bash
-# Remove old symlinks
+# 删除旧的符号链接
 rm -f ~/.config/opencode/plugins/superpowers.js
 rm -rf ~/.config/opencode/skills/superpowers
 
-# Optionally remove the cloned repo
+# （可选）删除克隆的仓库
 rm -rf ~/.config/opencode/superpowers
 
-# Remove skills.paths from opencode.json if you added one for superpowers
+# 如果你为 superpowers 添加了 skills.paths，请从 opencode.json 中删除
 ```
 
-Then follow the installation steps above.
+然后按照上面的安装步骤进行。
 
-## Usage
+## 使用方法
 
-### Finding Skills
+### 查找技能
 
-Use OpenCode's native `skill` tool to list all available skills:
+使用 OpenCode 原生的 `skill` 工具列出所有可用技能：
 
 ```
 use skill tool to list skills
 ```
 
-### Loading a Skill
+### 加载技能
 
 ```
 use skill tool to load superpowers/brainstorming
 ```
 
-### Personal Skills
+### 个人技能
 
-Create your own skills in `~/.config/opencode/skills/`:
+在 `~/.config/opencode/skills/` 中创建你自己的技能：
 
 ```bash
 mkdir -p ~/.config/opencode/skills/my-skill
 ```
 
-Create `~/.config/opencode/skills/my-skill/SKILL.md`:
+创建 `~/.config/opencode/skills/my-skill/SKILL.md`：
 
 ```markdown
 ---
@@ -65,22 +65,22 @@ name: my-skill
 description: Use when [condition] - [what it does]
 ---
 
-# My Skill
+# 我的技能
 
-[Your skill content here]
+[你的技能内容]
 ```
 
-### Project Skills
+### 项目技能
 
-Create project-specific skills in `.opencode/skills/` within your project.
+在项目中的 `.opencode/skills/` 内创建项目特定的技能。
 
-**Skill Priority:** Project skills > Personal skills > Superpowers skills
+**技能优先级：** 项目技能 > 个人技能 > 超级能力技能
 
-## Updating
+## 更新
 
-Superpowers updates automatically when you restart OpenCode. The plugin is re-installed from the git repository on each launch.
+重启 OpenCode 时，超级能力会自动更新。插件会在每次启动时从 git 仓库重新安装。
 
-To pin a specific version, use a branch or tag:
+要固定到特定版本，请使用分支或标签：
 
 ```json
 {
@@ -88,43 +88,43 @@ To pin a specific version, use a branch or tag:
 }
 ```
 
-## How It Works
+## 工作原理
 
-The plugin does two things:
+该插件做两件事：
 
-1. **Injects bootstrap context** via the `experimental.chat.system.transform` hook, adding superpowers awareness to every conversation.
-2. **Registers the skills directory** via the `config` hook, so OpenCode discovers all superpowers skills without symlinks or manual config.
+1. **通过 `experimental.chat.system.transform` 钩子注入引导上下文**，为每个对话添加超级能力感知。
+2. **通过 `config` 钩子注册技能目录**，以便 OpenCode 无需符号链接或手动配置即可发现所有超级能力技能。
 
-### Tool Mapping
+### 工具映射
 
-Skills written for Claude Code are automatically adapted for OpenCode:
+为 Claude Code 编写的技能会自动适配到 OpenCode：
 
 - `TodoWrite` → `todowrite`
-- `Task` with subagents → OpenCode's `@mention` system
-- `Skill` tool → OpenCode's native `skill` tool
-- File operations → Native OpenCode tools
+- 带子代理的 `Task` → OpenCode 的 `@mention` 系统
+- `Skill` 工具 → OpenCode 原生的 `skill` 工具
+- 文件操作 → OpenCode 原生工具
 
-## Troubleshooting
+## 故障排除
 
-### Plugin not loading
+### 插件没有加载
 
-1. Check OpenCode logs: `opencode run --print-logs "hello" 2>&1 | grep -i superpowers`
-2. Verify the plugin line in your `opencode.json` is correct
-3. Make sure you're running a recent version of OpenCode
+1. 检查 OpenCode 日志：`opencode run --print-logs "hello" 2>&1 | grep -i superpowers`
+2. 验证 `opencode.json` 中的插件行是否正确
+3. 确保你运行的是最新版本的 OpenCode
 
-### Skills not found
+### 技能没有找到
 
-1. Use OpenCode's `skill` tool to list available skills
-2. Check that the plugin is loading (see above)
-3. Each skill needs a `SKILL.md` file with valid YAML frontmatter
+1. 使用 OpenCode 的 `skill` 工具列出可用技能
+2. 检查插件是否正在加载（见上文）
+3. 每个技能需要一个带有有效 YAML 头信息的 `SKILL.md` 文件
 
-### Bootstrap not appearing
+### 引导上下文没有出现
 
-1. Check OpenCode version supports `experimental.chat.system.transform` hook
-2. Restart OpenCode after config changes
+1. 检查 OpenCode 版本是否支持 `experimental.chat.system.transform` 钩子
+2. 配置更改后重启 OpenCode
 
-## Getting Help
+## 获取帮助
 
-- Report issues: https://github.com/obra/superpowers/issues
-- Main documentation: https://github.com/obra/superpowers
-- OpenCode docs: https://opencode.ai/docs/
+- 报告问题：https://github.com/obra/superpowers/issues
+- 主文档：https://github.com/obra/superpowers
+- OpenCode 文档：https://opencode.ai/docs/
