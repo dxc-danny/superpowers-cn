@@ -1,13 +1,13 @@
-# Changelog
+# 更新日志
 
 ## [5.0.5] - 2026-03-17
 
-### Fixed
+### 修复
 
-- **Brainstorm server ESM fix**: Renamed `server.js` → `server.cjs` so the brainstorming server starts correctly on Node.js 22+ where the root `package.json` `"type": "module"` caused `require()` to fail. ([PR #784](https://github.com/obra/superpowers/pull/784) by @sarbojitrana, fixes [#774](https://github.com/obra/superpowers/issues/774), [#780](https://github.com/obra/superpowers/issues/780), [#783](https://github.com/obra/superpowers/issues/783))
-- **Brainstorm owner-PID on Windows**: Skip `BRAINSTORM_OWNER_PID` lifecycle monitoring on Windows/MSYS2 where the PID namespace is invisible to Node.js. Prevents the server from self-terminating after 60 seconds. The 30-minute idle timeout remains as the safety net. ([#770](https://github.com/obra/superpowers/issues/770), docs from [PR #768](https://github.com/obra/superpowers/pull/768) by @lucasyhzhu-debug)
-- **stop-server.sh reliability**: Verify the server process actually died before reporting success. Waits up to 2 seconds for graceful shutdown, escalates to `SIGKILL`, and reports failure if the process survives. ([#723](https://github.com/obra/superpowers/issues/723))
+- **Brainstorm 服务器 ESM 修复**：将 `server.js` 重命名为 `server.cjs`，以便在 Node.js 22+ 上正确启动头脑风暴服务器，因为根目录的 `package.json` 中的 `"type": "module"` 导致 `require()` 失败。（PR #784 由 @sarbojitrana 提交，修复了 #774、#780、#783）
+- **Windows 上的 Brainstorm 所有者 PID**：在 Windows/MSYS2 上跳过 `BRAINSTORM_OWNER_PID` 生命周期监控，因为 Node.js 无法看到 PID 命名空间。防止服务器在 60 秒后自终止。30 分钟的空闲超时仍然作为安全网。（#770，来自 PR #768 的文档由 @lucasyhzhu-debug 提交）
+- **stop-server.sh 可靠性**：在实际报告成功之前验证服务器进程是否已死亡。最多等待 2 秒优雅关闭，升级到 `SIGKILL`，如果进程存活则报告失败。（#723）
 
-### Changed
+### 更改
 
-- **Execution handoff**: Restore user choice between subagent-driven-development and executing-plans after plan writing. Subagent-driven is recommended but no longer mandatory. (Reverts `5e51c3e`)
+- **执行交接**：在计划编写后恢复用户在 subagent-driven-development 和 executing-plans 之间的选择。推荐使用 subagent-driven 但不再强制。（回退 `5e51c3e`）

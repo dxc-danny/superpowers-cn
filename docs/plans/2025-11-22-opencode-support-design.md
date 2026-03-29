@@ -1,64 +1,64 @@
-# OpenCode Support Design
+# OpenCode 支持设计
 
-**Date:** 2025-11-22
-**Author:** Bot & Jesse
-**Status:** Design Complete, Awaiting Implementation
+**日期：** 2025-11-22
+**作者：** Bot & Jesse
+**状态：** 设计完成，等待实现
 
-## Overview
+## 概述
 
-Add full superpowers support for OpenCode.ai using a native OpenCode plugin architecture that shares core functionality with the existing Codex implementation.
+为 OpenCode.ai 添加完整的超级能力支持，使用原生 OpenCode 插件架构，与现有的 Codex 实现共享核心功能。
 
-## Background
+## 背景
 
-OpenCode.ai is a coding agent similar to Claude Code and Codex. Previous attempts to port superpowers to OpenCode (PR #93, PR #116) used file-copying approaches. This design takes a different approach: building a native OpenCode plugin using their JavaScript/TypeScript plugin system while sharing code with the Codex implementation.
+OpenCode.ai 是一个类似于 Claude Code 和 Codex 的编码代理。之前将超级能力移植到 OpenCode 的尝试（PR #93、PR #116）使用了文件复制方法。本设计采用不同的方法：使用他们的 JavaScript/TypeScript 插件系统构建原生 OpenCode 插件，同时与 Codex 实现共享代码。
 
-### Key Differences Between Platforms
+### 平台之间的关键差异
 
-- **Claude Code**: Native Anthropic plugin system + file-based skills
-- **Codex**: No plugin system → bootstrap markdown + CLI script
-- **OpenCode**: JavaScript/TypeScript plugins with event hooks and custom tools API
+- **Claude Code**：原生 Anthropic 插件系统 + 基于文件的技能
+- **Codex**：无插件系统 → 引导 markdown + CLI 脚本
+- **OpenCode**：JavaScript/TypeScript 插件，带有事件钩子和自定义工具 API
 
-### OpenCode's Agent System
+### OpenCode 的代理系统
 
-- **Primary agents**: Build (default, full access) and Plan (restricted, read-only)
-- **Subagents**: General (research, searching, multi-step tasks)
-- **Invocation**: Automatic dispatch by primary agents OR manual `@mention` syntax
-- **Configuration**: Custom agents in `opencode.json` or `~/.config/opencode/agent/`
+- **主要代理**：Build（默认，完全访问）和 Plan（受限，只读）
+- **子代理**：General（研究、搜索、多步骤任务）
+- **调用**：主要代理自动分发或手动使用 `@mention` 语法
+- **配置**：`opencode.json` 或 `~/.config/opencode/agent/` 中的自定义代理
 
-## Architecture
+## 架构
 
-### High-Level Structure
+### 高级结构
 
-1. **Shared Core Module** (`lib/skills-core.js`)
-   - Common skill discovery and parsing logic
-   - Used by both Codex and OpenCode implementations
+1. **共享核心模块**（`lib/skills-core.js`）
+   - 通用的技能发现和解析逻辑
+   - Codex 和 OpenCode 实现共用
 
-2. **Platform-Specific Wrappers**
-   - Codex: CLI script (`.codex/superpowers-codex`)
-   - OpenCode: Plugin module (`.opencode/plugin/superpowers.js`)
+2. **平台特定包装器**
+   - Codex：CLI 脚本（`.codex/superpowers-codex`）
+   - OpenCode：插件模块（`.opencode/plugin/superpowers.js`）
 
-3. **Skill Directories**
-   - Core: `~/.config/opencode/superpowers/skills/` (or installed location)
-   - Personal: `~/.config/opencode/skills/` (shadows core skills)
+3. **技能目录**
+   - 核心：`~/.config/opencode/superpowers/skills/`（或安装位置）
+   - 个人：`~/.config/opencode/skills/`（覆盖核心技能）
 
-### Code Reuse Strategy
+### 代码重用策略
 
-Extract common functionality from `.codex/superpowers-codex` into shared module:
+从 `.codex/superpowers-codex` 提取公共功能到共享模块：
 
 ```javascript
 // lib/skills-core.js
 module.exports = {
-  extractFrontmatter(filePath),      // Parse name + description from YAML
-  findSkillsInDir(dir, maxDepth),    // Recursive SKILL.md discovery
-  findAllSkills(dirs),                // Scan multiple directories
-  resolveSkillPath(skillName, dirs), // Handle shadowing (personal > core)
-  checkForUpdates(repoDir)           // Git fetch/status check
+  extractFrontmatter(filePath),      // 从 YAML 解析 name + description
+  findSkillsInDir(dir, maxDepth),    // 递归 SKILL.md 发现
+  findAllSkills(dirs),               // 扫描多个目录
+  resolveSkillPath(skillName, dirs), // 处理覆盖（个人 > 核心）
+  checkForUpdates(repoDir)           // Git fetch/status 检查
 };
 ```
 
-### Skill Frontmatter Format
+### 技能 Frontmatter 格式
 
-Current format (no `when_to_use` field):
+当前格式（无 `when_to_use` 字段）：
 
 ```yaml
 ---
@@ -67,13 +67,13 @@ description: Use when [condition] - [what it does]; [additional context]
 ---
 ```
 
-## OpenCode Plugin Implementation
+## OpenCode 插件实现
 
-### Custom Tools
+### 自定义工具
 
-**Tool 1: `use_skill`**
+**工具 1：`use_skill`**
 
-Loads a specific skill's content into the conversation (equivalent to Claude's Skill tool).
+将特定技能的内容加载到对话中（相当于 Claude 的 Skill 工具）。
 
 ```javascript
 {
@@ -96,9 +96,9 @@ ${content}`;
 }
 ```
 
-**Tool 2: `find_skills`**
+**工具 2：`find_skills`**
 
-Lists all available skills with metadata.
+列出所有可用的技能及元数据。
 
 ```javascript
 {
@@ -116,38 +116,38 @@ Lists all available skills with metadata.
 }
 ```
 
-### Session Startup Hook
+### 会话启动钩子
 
-When a new session starts (`session.started` event):
+当新会话启动时（`session.started` 事件）：
 
-1. **Inject using-superpowers content**
-   - Full content of the using-superpowers skill
-   - Establishes mandatory workflows
+1. **注入 using-superpowers 内容**
+   - using-superpowers 技能的完整内容
+   - 建立强制性工作流
 
-2. **Run find_skills automatically**
-   - Display full list of available skills upfront
-   - Include skill directories for each
+2. **自动运行 find_skills**
+   - 立即显示所有可用技能的完整列表
+   - 包含每个技能的目录
 
-3. **Inject tool mapping instructions**
+3. **注入工具映射说明**
    ```markdown
-   **Tool Mapping for OpenCode:**
-   When skills reference tools you don't have, substitute:
+   **OpenCode 工具映射：**
+   当技能引用你没有的工具时，替换为：
    - `TodoWrite` → `update_plan`
-   - `Task` with subagents → Use OpenCode subagent system (@mention)
-   - `Skill` tool → `use_skill` custom tool
-   - Read, Write, Edit, Bash → Your native equivalents
+   - 带子代理的 `Task` 工具 → 使用 OpenCode 子代理系统（@mention 语法）
+   - `Skill` 工具 → `use_skill` 自定义工具
+   - `Read`、`Write`、`Edit`、`Bash` → 你的原生等价物
 
-   **Skill directories contain:**
-   - Supporting scripts (run with bash)
-   - Additional documentation (read with read tool)
-   - Utilities specific to that skill
+   **技能目录包含：**
+   - 你可以用 bash 运行的脚本
+   - 你可以用 read 工具阅读的附加文档
+   - 特定于该技能的实用工具
    ```
 
-4. **Check for updates** (non-blocking)
-   - Quick git fetch with timeout
-   - Notify if updates available
+4. **检查更新**（非阻塞）
+   - 快速 git fetch 加超时
+   - 如有可用更新则通知
 
-### Plugin Structure
+### 插件结构
 
 ```javascript
 // .opencode/plugin/superpowers.js
@@ -179,7 +179,7 @@ export const SuperpowersPlugin = async ({ client, directory, $ }) => {
           skill_name: z.string()
         }),
         execute: async ({ skill_name }) => {
-          // Implementation using skillsCore
+          // 使用 skillsCore 实现
         }
       },
       {
@@ -187,7 +187,7 @@ export const SuperpowersPlugin = async ({ client, directory, $ }) => {
         description: 'List all available skills',
         schema: z.object({}),
         execute: async () => {
-          // Implementation using skillsCore
+          // 使用 skillsCore 实现
         }
       }
     ]
@@ -195,100 +195,100 @@ export const SuperpowersPlugin = async ({ client, directory, $ }) => {
 };
 ```
 
-## File Structure
+## 文件结构
 
 ```
 superpowers/
 ├── lib/
-│   └── skills-core.js           # NEW: Shared skill logic
+│   └── skills-core.js           # 新建：共享技能逻辑
 ├── .codex/
-│   ├── superpowers-codex        # UPDATED: Use skills-core
+│   ├── superpowers-codex        # 更新：使用 skills-core
 │   ├── superpowers-bootstrap.md
 │   └── INSTALL.md
 ├── .opencode/
 │   ├── plugin/
-│   │   └── superpowers.js       # NEW: OpenCode plugin
-│   └── INSTALL.md               # NEW: Installation guide
-└── skills/                       # Unchanged
+│   │   └── superpowers.js       # 新建：OpenCode 插件
+│   └── INSTALL.md               # 新建：安装指南
+└── skills/                       # 不变
 ```
 
-## Implementation Plan
+## 实现计划
 
-### Phase 1: Refactor Shared Core
+### 阶段 1：重构共享核心
 
-1. Create `lib/skills-core.js`
-   - Extract frontmatter parsing from `.codex/superpowers-codex`
-   - Extract skill discovery logic
-   - Extract path resolution (with shadowing)
-   - Update to use only `name` and `description` (no `when_to_use`)
+1. 创建 `lib/skills-core.js`
+   - 从 `.codex/superpowers-codex` 提取 frontmatter 解析
+   - 提取技能发现逻辑
+   - 提取路径解析（带覆盖）
+   - 更新为仅使用 `name` 和 `description`（无 `when_to_use`）
 
-2. Update `.codex/superpowers-codex` to use shared core
-   - Import from `../lib/skills-core.js`
-   - Remove duplicated code
-   - Keep CLI wrapper logic
+2. 更新 `.codex/superpowers-codex` 使用共享核心
+   - 从 `../lib/skills-core.js` 导入
+   - 删除重复代码
+   - 保留 CLI 包装器逻辑
 
-3. Test Codex implementation still works
-   - Verify bootstrap command
-   - Verify use-skill command
-   - Verify find-skills command
+3. 测试 Codex 实现仍然有效
+   - 验证 bootstrap 命令
+   - 验证 use-skill 命令
+   - 验证 find-skills 命令
 
-### Phase 2: Build OpenCode Plugin
+### 阶段 2：构建 OpenCode 插件
 
-1. Create `.opencode/plugin/superpowers.js`
-   - Import shared core from `../../lib/skills-core.js`
-   - Implement plugin function
-   - Define custom tools (use_skill, find_skills)
-   - Implement session.started hook
+1. 创建 `.opencode/plugin/superpowers.js`
+   - 从 `../../lib/skills-core.js` 导入共享核心
+   - 实现插件函数
+   - 定义自定义工具（use_skill、find_skills）
+   - 实现 session.started 钩子
 
-2. Create `.opencode/INSTALL.md`
-   - Installation instructions
-   - Directory setup
-   - Configuration guidance
+2. 创建 `.opencode/INSTALL.md`
+   - 安装说明
+   - 目录设置
+   - 配置指南
 
-3. Test OpenCode implementation
-   - Verify session startup bootstrap
-   - Verify use_skill tool works
-   - Verify find_skills tool works
-   - Verify skill directories are accessible
+3. 测试 OpenCode 实现
+   - 验证会话启动 bootstrap
+   - 验证 use_skill 工具有效
+   - 验证 find_skills 工具有效
+   - 验证技能目录可访问
 
-### Phase 3: Documentation & Polish
+### 阶段 3：文档和润色
 
-1. Update README with OpenCode support
-2. Add OpenCode installation to main docs
-3. Update RELEASE-NOTES
-4. Test both Codex and OpenCode work correctly
+1. 更新 README 添加 OpenCode 支持
+2. 将 OpenCode 安装添加到主文档
+3. 更新 RELEASE-NOTES
+4. 测试 Codex 和 OpenCode 都能正常工作
 
-## Next Steps
+## 下一步
 
-1. **Create isolated workspace** (using git worktrees)
-   - Branch: `feature/opencode-support`
+1. **创建隔离的工作空间**（使用 git worktrees）
+   - 分支：`feature/opencode-support`
 
-2. **Follow TDD where applicable**
-   - Test shared core functions
-   - Test skill discovery and parsing
-   - Integration tests for both platforms
+2. **在适用的情况下遵循 TDD**
+   - 测试共享核心函数
+   - 测试技能发现和解析
+   - 两个平台的集成测试
 
-3. **Incremental implementation**
-   - Phase 1: Refactor shared core + update Codex
-   - Verify Codex still works before moving on
-   - Phase 2: Build OpenCode plugin
-   - Phase 3: Documentation and polish
+3. **增量实现**
+   - 阶段 1：重构共享核心 + 更新 Codex
+   - 在继续之前验证 Codex 仍然有效
+   - 阶段 2：构建 OpenCode 插件
+   - 阶段 3：文档和润色
 
-4. **Testing strategy**
-   - Manual testing with real OpenCode installation
-   - Verify skill loading, directories, scripts work
-   - Test both Codex and OpenCode side-by-side
-   - Verify tool mappings work correctly
+4. **测试策略**
+   - 使用真实 OpenCode 安装进行手动测试
+   - 验证技能加载、目录、脚本工作
+   - 并排测试 Codex 和 OpenCode
+   - 验证工具映射正确工作
 
-5. **PR and merge**
-   - Create PR with complete implementation
-   - Test in clean environment
-   - Merge to main
+5. **PR 和合并**
+   - 创建包含完整实现的 PR
+   - 在干净环境中测试
+   - 合并到 main
 
-## Benefits
+## 优势
 
-- **Code reuse**: Single source of truth for skill discovery/parsing
-- **Maintainability**: Bug fixes apply to both platforms
-- **Extensibility**: Easy to add future platforms (Cursor, Windsurf, etc.)
-- **Native integration**: Uses OpenCode's plugin system properly
-- **Consistency**: Same skill experience across all platforms
+- **代码重用**：技能发现/解析的单一事实来源
+- **可维护性**：错误修复适用于两个平台
+- **可扩展性**：轻松添加未来平台（Cursor、Windsurf 等）
+- **原生集成**：正确使用 OpenCode 的插件系统
+- **一致性**：跨所有平台的相同技能体验

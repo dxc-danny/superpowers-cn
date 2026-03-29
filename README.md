@@ -1,86 +1,84 @@
-# Superpowers
+# 超级能力
 
-Superpowers is a complete software development workflow for your coding agents, built on top of a set of composable "skills" and some initial instructions that make sure your agent uses them.
+超级能力（Superpowers）是一套完整的软件开发生工作流，专为你的编码代理设计。它基于一组可组合的"技能"和一些初始指令，确保你的代理能够正确使用它们。
 
-## How it works
+## 工作原理
 
-It starts from the moment you fire up your coding agent. As soon as it sees that you're building something, it *doesn't* just jump into trying to write code. Instead, it steps back and asks you what you're really trying to do. 
+从你启动编码代理的那一刻起，它就开始工作了。当你发现自己在构建某个东西时，它**不会**直接跳进去写代码。相反，它会退后一步，问你真正想要做什么。
 
-Once it's teased a spec out of the conversation, it shows it to you in chunks short enough to actually read and digest. 
+一旦从对话中提炼出规范，它会将内容分成足够小且易于阅读和理解的块展示给你。
 
-After you've signed off on the design, your agent puts together an implementation plan that's clear enough for an enthusiastic junior engineer with poor taste, no judgement, no project context, and an aversion to testing to follow. It emphasizes true red/green TDD, YAGNI (You Aren't Gonna Need It), and DRY. 
+在你批准设计后，你的代理会整理出一个足够清晰的实现计划，即使是给一个缺乏品味、没有判断力、没有项目上下文、厌恶测试的热情初级工程师也能follow。它强调真正的红/绿 TDD、YAGNI（你不需要它）和 DRY。
 
-Next up, once you say "go", it launches a *subagent-driven-development* process, having agents work through each engineering task, inspecting and reviewing their work, and continuing forward. It's not uncommon for Claude to be able to work autonomously for a couple hours at a time without deviating from the plan you put together.
+接下来，当你 say "go" 时，它会启动一个**子代理驱动开发**流程，让代理完成每个工程任务，检查和审查他们的工作，并持续推进。通常情况下，Claude 能够自主工作几个小时而不偏离你制定的计划。
 
-There's a bunch more to it, but that's the core of the system. And because the skills trigger automatically, you don't need to do anything special. Your coding agent just has Superpowers.
+还有很多内容，但这是系统的核心。由于技能是自动触发的，你不需要做任何特殊的事情。你的编码代理本身就拥有超级能力。
 
+## 赞助
 
-## Sponsorship
+如果超级能力帮助你赚到了钱，我非常感激你考虑[赞助我的开源工作](https://github.com/sponsors/obra)。
 
-If Superpowers has helped you do stuff that makes money and you are so inclined, I'd greatly appreciate it if you'd consider [sponsoring my opensource work](https://github.com/sponsors/obra).
-
-Thanks! 
+谢谢！
 
 - Jesse
 
+## 安装
 
-## Installation
+**注意：** 安装方式因平台而异。Claude Code 或 Cursor 有内置的插件市场。Codex 和 OpenCode 需要手动设置。
 
-**Note:** Installation differs by platform. Claude Code or Cursor have built-in plugin marketplaces. Codex and OpenCode require manual setup.
+### Claude Code 官方市场
 
-### Claude Code Official Marketplace
+超级能力可以通过[官方 Claude 插件市场](https://claude.com/plugins/superpowers)获取。
 
-Superpowers is available via the [official Claude plugin marketplace](https://claude.com/plugins/superpowers)
-
-Install the plugin from Claude marketplace:
+从 Claude 市场安装插件：
 
 ```bash
 /plugin install superpowers@claude-plugins-official
 ```
 
-### Claude Code (via Plugin Marketplace)
+### Claude Code（通过插件市场）
 
-In Claude Code, register the marketplace first:
+在 Claude Code 中，首先注册市场：
 
 ```bash
 /plugin marketplace add obra/superpowers-marketplace
 ```
 
-Then install the plugin from this marketplace:
+然后从这个市场安装插件：
 
 ```bash
 /plugin install superpowers@superpowers-marketplace
 ```
 
-### Cursor (via Plugin Marketplace)
+### Cursor（通过插件市场）
 
-In Cursor Agent chat, install from marketplace:
+在 Cursor Agent 聊天中，从市场安装：
 
 ```text
 /add-plugin superpowers
 ```
 
-or search for "superpowers" in the plugin marketplace.
+或在插件市场中搜索"superpowers"。
 
 ### Codex
 
-Tell Codex:
+告诉 Codex：
 
 ```
 Fetch and follow instructions from https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.codex/INSTALL.md
 ```
 
-**Detailed docs:** [docs/README.codex.md](docs/README.codex.md)
+**详细文档：** [docs/README.codex.md](docs/README.codex.md)
 
 ### OpenCode
 
-Tell OpenCode:
+告诉 OpenCode：
 
 ```
 Fetch and follow instructions from https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.opencode/INSTALL.md
 ```
 
-**Detailed docs:** [docs/README.opencode.md](docs/README.opencode.md)
+**详细文档：** [docs/README.opencode.md](docs/README.opencode.md)
 
 ### Gemini CLI
 
@@ -88,100 +86,100 @@ Fetch and follow instructions from https://raw.githubusercontent.com/obra/superp
 gemini extensions install https://github.com/obra/superpowers
 ```
 
-To update:
+更新：
 
 ```bash
 gemini extensions update superpowers
 ```
 
-### Verify Installation
+### 验证安装
 
-Start a new session in your chosen platform and ask for something that should trigger a skill (for example, "help me plan this feature" or "let's debug this issue"). The agent should automatically invoke the relevant superpowers skill.
+在你选择的平台开始一个新会话，并询问一些应该触发技能的事情（例如"帮我计划这个功能"或"让我们调试这个问题"）。代理应该自动调用相关的超级能力技能。
 
-## The Basic Workflow
+## 基本工作流
 
-1. **brainstorming** - Activates before writing code. Refines rough ideas through questions, explores alternatives, presents design in sections for validation. Saves design document.
+1. **brainstorming** - 在写代码之前激活。通过问题细化粗糙的想法，探索替代方案，分节展示设计以供验证。保存设计文档。
 
-2. **using-git-worktrees** - Activates after design approval. Creates isolated workspace on new branch, runs project setup, verifies clean test baseline.
+2. **using-git-worktrees** - 设计批准后激活。在新分支上创建隔离的工作空间，运行项目设置，验证干净的测试基线。
 
-3. **writing-plans** - Activates with approved design. Breaks work into bite-sized tasks (2-5 minutes each). Every task has exact file paths, complete code, verification steps.
+3. **writing-plans** - 设计批准后激活。将工作分解为大小适中的任务（每个2-5分钟）。每个任务都有精确的文件路径、完整的代码和验证步骤。
 
-4. **subagent-driven-development** or **executing-plans** - Activates with plan. Dispatches fresh subagent per task with two-stage review (spec compliance, then code quality), or executes in batches with human checkpoints.
+4. **subagent-driven-development** 或 **executing-plans** - 计划激活后激活。为每个任务分配新的子代理进行两阶段审查（规范合规性，然后是代码质量），或者批量执行并在人工检查点停止。
 
-5. **test-driven-development** - Activates during implementation. Enforces RED-GREEN-REFACTOR: write failing test, watch it fail, write minimal code, watch it pass, commit. Deletes code written before tests.
+5. **test-driven-development** - 在实现期间激活。强制执行 RED-GREEN-REFACTOR：写失败的测试，看它失败，写最少的代码，看它通过，提交。删除在测试之前写的代码。
 
-6. **requesting-code-review** - Activates between tasks. Reviews against plan, reports issues by severity. Critical issues block progress.
+6. **requesting-code-review** - 在任务之间激活。根据计划审查，按严重程度报告问题。关键问题阻止进度。
 
-7. **finishing-a-development-branch** - Activates when tasks complete. Verifies tests, presents options (merge/PR/keep/discard), cleans up worktree.
+7. **finishing-a-development-branch** - 任务完成后激活。验证测试，提供选项（合并/PR/保留/丢弃），清理工作树。
 
-**The agent checks for relevant skills before any task.** Mandatory workflows, not suggestions.
+**代理在任何任务之前都会检查相关技能。** 这是强制性的工作流，不是建议。
 
-## What's Inside
+## 内容概览
 
-### Skills Library
+### 技能库
 
-**Testing**
-- **test-driven-development** - RED-GREEN-REFACTOR cycle (includes testing anti-patterns reference)
+**测试**
+- **test-driven-development** - RED-GREEN-REFACTOR 周期（包括测试反模式参考）
 
-**Debugging**
-- **systematic-debugging** - 4-phase root cause process (includes root-cause-tracing, defense-in-depth, condition-based-waiting techniques)
-- **verification-before-completion** - Ensure it's actually fixed
+**调试**
+- **systematic-debugging** - 四阶段根因流程（包括根因追踪、深度防御、基于条件的等待技术）
+- **verification-before-completion** - 确保它真的被修复了
 
-**Collaboration** 
-- **brainstorming** - Socratic design refinement
-- **writing-plans** - Detailed implementation plans
-- **executing-plans** - Batch execution with checkpoints
-- **dispatching-parallel-agents** - Concurrent subagent workflows
-- **requesting-code-review** - Pre-review checklist
-- **receiving-code-review** - Responding to feedback
-- **using-git-worktrees** - Parallel development branches
-- **finishing-a-development-branch** - Merge/PR decision workflow
-- **subagent-driven-development** - Fast iteration with two-stage review (spec compliance, then code quality)
+**协作**
+- **brainstorming** - 苏格拉底式设计细化
+- **writing-plans** - 详细的实现计划
+- **executing-plans** - 带检查点的批量执行
+- **dispatching-parallel-agents** - 并发子代理工作流
+- **requesting-code-review** - 预审清单
+- **receiving-code-review** - 响应反馈
+- **using-git-worktrees** - 并行开发分支
+- **finishing-a-development-branch** - 合并/PR 决策工作流
+- **subagent-driven-development** - 快速迭代与两阶段审查（规范合规性，然后是代码质量）
 
-**Meta**
-- **writing-skills** - Create new skills following best practices (includes testing methodology)
-- **using-superpowers** - Introduction to the skills system
+**元技能**
+- **writing-skills** - 按照最佳实践创建新技能（包括测试方法论）
+- **using-superpowers** - 技能系统介绍
 
-## Philosophy
+## 理念
 
-- **Test-Driven Development** - Write tests first, always
-- **Systematic over ad-hoc** - Process over guessing
-- **Complexity reduction** - Simplicity as primary goal
-- **Evidence over claims** - Verify before declaring success
+- **测试驱动开发** - 始终先写测试
+- **系统化而非临时** - 流程优先于猜测
+- **复杂性简化** - 简单性作为主要目标
+- **证据胜于声明** - 在宣布成功之前验证
 
-Read more: [Superpowers for Claude Code](https://blog.fsck.com/2025/10/09/superpowers/)
+阅读更多：[Superpowers for Claude Code](https://blog.fsck.com/2025/10/09/superpowers/)
 
-## Contributing
+## 贡献
 
-Skills live directly in this repository. To contribute:
+技能直接存放在这个仓库中。贡献方式：
 
-1. Fork the repository
-2. Create a branch for your skill
-3. Follow the `writing-skills` skill for creating and testing new skills
-4. Submit a PR
+1. Fork 仓库
+2. 为你的技能创建一个分支
+3. 按照 `writing-skills` 技能创建和测试新技能
+4. 提交 PR
 
-See `skills/writing-skills/SKILL.md` for the complete guide.
+参见 `skills/writing-skills/SKILL.md` 获取完整指南。
 
-## Updating
+## 更新
 
-Skills update automatically when you update the plugin:
+当你更新插件时，技能会自动更新：
 
 ```bash
 /plugin update superpowers
 ```
 
-## License
+## 许可证
 
-MIT License - see LICENSE file for details
+MIT 许可证 - 参见 LICENSE 文件了解详情
 
-## Community
+## 社区
 
-Superpowers is built by [Jesse Vincent](https://blog.fsck.com) and the rest of the folks at [Prime Radiant](https://primeradiant.com).
+超级能力由 [Jesse Vincent](https://blog.fsck.com) 和 [Prime Radiant](https://primeradiant.com) 的其他人构建。
 
-For community support, questions, and sharing what you're building with Superpowers, join us on [Discord](https://discord.gg/Jd8Vphy9jq).
+如需社区支持、问题解答和分享你用超级能力构建的内容，请加入 [Discord](https://discord.gg/Jd8Vphy9jq)。
 
-## Support
+## 支持
 
-- **Discord**: [Join us on Discord](https://discord.gg/Jd8Vphy9jq)
-- **Issues**: https://github.com/obra/superpowers/issues
-- **Marketplace**: https://github.com/obra/superpowers-marketplace
+- **Discord**: [加入我们的 Discord](https://discord.gg/Jd8Vphy9jq)
+- **问题**: https://github.com/obra/superpowers/issues
+- **市场**: https://github.com/obra/superpowers-marketplace
