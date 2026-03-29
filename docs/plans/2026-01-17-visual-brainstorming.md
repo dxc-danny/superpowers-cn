@@ -1,22 +1,22 @@
-# Visual Brainstorming Companion Implementation Plan
+# 视觉头脑风暴伴侣实现计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Give Claude a browser-based visual companion for brainstorming sessions - show mockups, prototypes, and interactive choices alongside terminal conversation.
+**目标：** 给 Claude 一个基于浏览器的视觉头脑风暴伴侣——在终端会话旁展示模型、原型 和交互式选择。
 
-**Architecture:** Claude writes HTML to a temp file. A local Node.js server watches that file and serves it with an auto-injected helper library. User interactions flow via WebSocket to server stdout, which Claude sees in background task output.
+**架构：** Claude 将 HTML 写入临时文件。本地 Node.js 服务器监视该文件并使用自动注入的 helper 库提供服务。用户交互通过 WebSocket 流向服务器 stdout，Claude 在后台任务输出中看到。
 
-**Tech Stack:** Node.js, Express, ws (WebSocket), chokidar (file watching)
+**技术栈：** Node.js、Express、ws (WebSocket)、chokidar (文件监视)
 
 ---
 
-## Task 1: Create the Server Foundation
+## 任务 1：创建服务器基础
 
-**Files:**
-- Create: `lib/brainstorm-server/index.js`
-- Create: `lib/brainstorm-server/package.json`
+**文件：**
+- 创建：`lib/brainstorm-server/index.js`
+- 创建：`lib/brainstorm-server/package.json`
 
-**Step 1: Create package.json**
+**步骤 1：创建 package.json**
 
 ```json
 {
@@ -32,7 +32,7 @@
 }
 ```
 
-**Step 2: Create minimal server that starts**
+**步骤 2：创建可启动的最小服务器**
 
 ```javascript
 const express = require('express');
@@ -46,12 +46,12 @@ const PORT = process.env.BRAINSTORM_PORT || 3333;
 const SCREEN_FILE = process.env.BRAINSTORM_SCREEN || '/tmp/brainstorm/screen.html';
 const SCREEN_DIR = path.dirname(SCREEN_FILE);
 
-// Ensure screen directory exists
+// 确保屏幕目录存在
 if (!fs.existsSync(SCREEN_DIR)) {
   fs.mkdirSync(SCREEN_DIR, { recursive: true });
 }
 
-// Create default screen if none exists
+// 如果不存在则创建默认屏幕
 if (!fs.existsSync(SCREEN_FILE)) {
   fs.writeFileSync(SCREEN_FILE, `<!DOCTYPE html>
 <html>
@@ -74,7 +74,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Track connected browsers for reload notifications
+// 跟踪连接的浏览器以发送重载通知
 const clients = new Set();
 
 wss.on('connection', (ws) => {
@@ -82,17 +82,17 @@ wss.on('connection', (ws) => {
   ws.on('close', () => clients.delete(ws));
 
   ws.on('message', (data) => {
-    // User interaction event - write to stdout for Claude
+    // 用户交互事件 - 写入 stdout 供 Claude 查看
     const event = JSON.parse(data.toString());
     console.log(JSON.stringify({ type: 'user-event', ...event }));
   });
 });
 
-// Serve current screen with helper.js injected
+// 服务当前屏幕并注入 helper.js
 app.get('/', (req, res) => {
   let html = fs.readFileSync(SCREEN_FILE, 'utf-8');
 
-  // Inject helper script before </body>
+  // 在 </body> 之前注入 helper 脚本
   const helperScript = fs.readFileSync(path.join(__dirname, 'helper.js'), 'utf-8');
   const injection = `<script>\n${helperScript}\n</script>`;
 
@@ -105,10 +105,10 @@ app.get('/', (req, res) => {
   res.type('html').send(html);
 });
 
-// Watch for screen file changes
+// 监视屏幕文件变化
 chokidar.watch(SCREEN_FILE).on('change', () => {
   console.log(JSON.stringify({ type: 'screen-updated', file: SCREEN_FILE }));
-  // Notify all browsers to reload
+  // 通知所有浏览器重载
   clients.forEach(ws => {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'reload' }));
@@ -121,17 +121,17 @@ server.listen(PORT, '127.0.0.1', () => {
 });
 ```
 
-**Step 3: Run npm install**
+**步骤 3：运行 npm install**
 
-Run: `cd lib/brainstorm-server && npm install`
-Expected: Dependencies installed
+运行：`cd lib/brainstorm-server && npm install`
+预期：依赖已安装
 
-**Step 4: Test server starts**
+**步骤 4：测试服务器启动**
 
-Run: `cd lib/brainstorm-server && timeout 3 node index.js || true`
-Expected: See JSON with `server-started` and port info
+运行：`cd lib/brainstorm-server && timeout 3 node index.js || true`
+预期：看到带有 `server-started` 和端口信息的 JSON
 
-**Step 5: Commit**
+**步骤 5：提交**
 
 ```bash
 git add lib/brainstorm-server/
@@ -140,12 +140,12 @@ git commit -m "feat: add brainstorm server foundation"
 
 ---
 
-## Task 2: Create the Helper Library
+## 任务 2：创建 Helper 库
 
-**Files:**
-- Create: `lib/brainstorm-server/helper.js`
+**文件：**
+- 创建：`lib/brainstorm-server/helper.js`
 
-**Step 1: Create helper.js with event auto-capture**
+**步骤 1：创建带有事件自动捕获的 helper.js**
 
 ```javascript
 (function() {
@@ -157,7 +157,7 @@ git commit -m "feat: add brainstorm server foundation"
     ws = new WebSocket(WS_URL);
 
     ws.onopen = () => {
-      // Send any queued events
+      // 发送任何排队的事件
       eventQueue.forEach(e => ws.send(JSON.stringify(e)));
       eventQueue = [];
     };
@@ -170,7 +170,7 @@ git commit -m "feat: add brainstorm server foundation"
     };
 
     ws.onclose = () => {
-      // Reconnect after 1 second
+      // 1 秒后重连
       setTimeout(connect, 1000);
     };
   }
@@ -184,12 +184,12 @@ git commit -m "feat: add brainstorm server foundation"
     }
   }
 
-  // Auto-capture clicks on interactive elements
+  // 自动捕获交互元素上的点击
   document.addEventListener('click', (e) => {
     const target = e.target.closest('button, a, [data-choice], [role="button"], input[type="submit"]');
     if (!target) return;
 
-    // Don't capture regular link navigation
+    // 不捕获常规链接导航
     if (target.tagName === 'A' && !target.dataset.choice) return;
 
     e.preventDefault();
@@ -203,7 +203,7 @@ git commit -m "feat: add brainstorm server foundation"
     });
   });
 
-  // Auto-capture form submissions
+  // 自动捕获表单提交
   document.addEventListener('submit', (e) => {
     e.preventDefault();
     const form = e.target;
@@ -219,7 +219,7 @@ git commit -m "feat: add brainstorm server foundation"
     });
   });
 
-  // Auto-capture input changes (debounced)
+  // 自动捕获输入更改（防抖）
   let inputTimeout = null;
   document.addEventListener('input', (e) => {
     const target = e.target;
@@ -234,10 +234,10 @@ git commit -m "feat: add brainstorm server foundation"
         value: target.value,
         inputType: target.type || target.tagName.toLowerCase()
       });
-    }, 500); // 500ms debounce
+    }, 500); // 500ms 防抖
   });
 
-  // Expose for explicit use if needed
+  // 如果需要可显式使用
   window.brainstorm = {
     send: send,
     choice: (value, metadata = {}) => send({ type: 'choice', value, ...metadata })
@@ -247,12 +247,12 @@ git commit -m "feat: add brainstorm server foundation"
 })();
 ```
 
-**Step 2: Verify helper.js is syntactically valid**
+**步骤 2：验证 helper.js 语法正确**
 
-Run: `node -c lib/brainstorm-server/helper.js`
-Expected: No syntax errors
+运行：`node -c lib/brainstorm-server/helper.js`
+预期：没有语法错误
 
-**Step 3: Commit**
+**步骤 3：提交**
 
 ```bash
 git add lib/brainstorm-server/helper.js
@@ -261,13 +261,13 @@ git commit -m "feat: add browser helper library for event capture"
 
 ---
 
-## Task 3: Write Tests for the Server
+## 任务 3：为服务器编写测试
 
-**Files:**
-- Create: `tests/brainstorm-server/server.test.js`
-- Create: `tests/brainstorm-server/package.json`
+**文件：**
+- 创建：`tests/brainstorm-server/server.test.js`
+- 创建：`tests/brainstorm-server/package.json`
 
-**Step 1: Create test package.json**
+**步骤 1：创建测试 package.json**
 
 ```json
 {
@@ -279,7 +279,7 @@ git commit -m "feat: add browser helper library for event capture"
 }
 ```
 
-**Step 2: Write server tests**
+**步骤 2：编写服务器测试**
 
 ```javascript
 const { spawn } = require('child_process');
@@ -293,7 +293,7 @@ const SERVER_PATH = path.join(__dirname, '../../lib/brainstorm-server/index.js')
 const TEST_PORT = 3334;
 const TEST_SCREEN = '/tmp/brainstorm-test/screen.html';
 
-// Clean up test directory
+// 清理测试目录
 function cleanup() {
   if (fs.existsSync(path.dirname(TEST_SCREEN))) {
     fs.rmSync(path.dirname(TEST_SCREEN), { recursive: true });
@@ -317,7 +317,7 @@ async function fetch(url) {
 async function runTests() {
   cleanup();
 
-  // Start server
+  // 启动服务器
   const server = spawn('node', [SERVER_PATH], {
     env: { ...process.env, BRAINSTORM_PORT: TEST_PORT, BRAINSTORM_SCREEN: TEST_SCREEN }
   });
@@ -326,16 +326,16 @@ async function runTests() {
   server.stdout.on('data', (data) => { stdout += data.toString(); });
   server.stderr.on('data', (data) => { console.error('Server stderr:', data.toString()); });
 
-  await sleep(1000); // Wait for server to start
+  await sleep(1000); // 等待服务器启动
 
   try {
-    // Test 1: Server starts and outputs JSON
+    // 测试 1：服务器启动并输出 JSON
     console.log('Test 1: Server startup message');
     assert(stdout.includes('server-started'), 'Should output server-started');
     assert(stdout.includes(TEST_PORT.toString()), 'Should include port');
     console.log('  PASS');
 
-    // Test 2: GET / returns HTML with helper injected
+    // 测试 2：GET / 返回带有注入 helper 的 HTML
     console.log('Test 2: Serves HTML with helper injected');
     const res = await fetch(`http://localhost:${TEST_PORT}/`);
     assert.strictEqual(res.status, 200);
@@ -343,9 +343,9 @@ async function runTests() {
     assert(res.body.includes('WebSocket'), 'Should have helper.js injected');
     console.log('  PASS');
 
-    // Test 3: WebSocket connection and event relay
+    // 测试 3：WebSocket 连接和事件转发
     console.log('Test 3: WebSocket relays events to stdout');
-    stdout = ''; // Reset stdout capture
+    stdout = ''; // 重置 stdout 捕获
     const ws = new WebSocket(`ws://localhost:${TEST_PORT}`);
     await new Promise(resolve => ws.on('open', resolve));
 
@@ -357,7 +357,7 @@ async function runTests() {
     ws.close();
     console.log('  PASS');
 
-    // Test 4: File change triggers reload notification
+    // 测试 4：文件更改触发重载通知
     console.log('Test 4: File change notifies browsers');
     const ws2 = new WebSocket(`ws://localhost:${TEST_PORT}`);
     await new Promise(resolve => ws2.on('open', resolve));
@@ -368,7 +368,7 @@ async function runTests() {
       if (msg.type === 'reload') gotReload = true;
     });
 
-    // Modify the screen file
+    // 修改屏幕文件
     fs.writeFileSync(TEST_SCREEN, '<html><body>Updated</body></html>');
     await sleep(500);
 
@@ -390,12 +390,12 @@ runTests().catch(err => {
 });
 ```
 
-**Step 3: Run tests**
+**步骤 3：运行测试**
 
-Run: `cd tests/brainstorm-server && npm install ws && node server.test.js`
-Expected: All tests pass
+运行：`cd tests/brainstorm-server && npm install ws && node server.test.js`
+预期：所有测试通过
 
-**Step 4: Commit**
+**步骤 4：提交**
 
 ```bash
 git add tests/brainstorm-server/
@@ -404,50 +404,50 @@ git commit -m "test: add brainstorm server integration tests"
 
 ---
 
-## Task 4: Add Visual Companion to Brainstorming Skill
+## 任务 4：将视觉伴侣添加到头脑风暴技能
 
-**Files:**
-- Modify: `skills/brainstorming/SKILL.md`
-- Create: `skills/brainstorming/visual-companion.md` (supporting doc)
+**文件：**
+- 修改：`skills/brainstorming/SKILL.md`
+- 创建：`skills/brainstorming/visual-companion.md`（支持文档）
 
-**Step 1: Create the supporting documentation**
+**步骤 1：创建支持文档**
 
-Create `skills/brainstorming/visual-companion.md`:
+创建 `skills/brainstorming/visual-companion.md`：
 
 ```markdown
-# Visual Companion Reference
+# 视觉伴侣参考
 
-## Starting the Server
+## 启动服务器
 
-Run as a background job:
+作为后台作业运行：
 
 ```bash
 node ${PLUGIN_ROOT}/lib/brainstorm-server/index.js
 ```
 
-Tell the user: "I've started a visual companion at http://localhost:3333 - open it in a browser."
+告诉用户："我在 http://localhost:3333 启动了视觉伴侣 — 在浏览器中打开它。"
 
-## Pushing Screens
+## 推送屏幕
 
-Write HTML to `/tmp/brainstorm/screen.html`. The server watches this file and auto-refreshes the browser.
+将 HTML 写入 `/tmp/brainstorm/screen.html`。服务器监视此文件并自动刷新浏览器。
 
-## Reading User Responses
+## 读取用户响应
 
-Check the background task output for JSON events:
+在后台任务输出中检查 JSON 事件：
 
 ```json
 {"type":"user-event","type":"click","text":"Option A","choice":"optionA","timestamp":1234567890}
 {"type":"user-event","type":"submit","data":{"notes":"My feedback"},"timestamp":1234567891}
 ```
 
-Event types:
-- **click**: User clicked button or `data-choice` element
-- **submit**: User submitted form (includes all form data)
-- **input**: User typed in field (debounced 500ms)
+事件类型：
+- **click**: 用户点击按钮或 `data-choice` 元素
+- **submit**: 用户提交表单（包含所有表单数据）
+- **input**: 用户在字段中输入（500ms 防抖）
 
-## HTML Patterns
+## HTML 模式
 
-### Choice Cards
+### 选择卡片
 
 ```html
 <div class="options">
@@ -462,7 +462,7 @@ Event types:
 </div>
 ```
 
-### Interactive Mockup
+### 交互式模型
 
 ```html
 <div class="mockup">
@@ -472,7 +472,7 @@ Event types:
 </div>
 ```
 
-### Form with Notes
+### 带备注的表单
 
 ```html
 <form>
@@ -482,46 +482,46 @@ Event types:
 </form>
 ```
 
-### Explicit JavaScript
+### 显式 JavaScript
 
 ```html
 <button onclick="brainstorm.choice('custom', {extra: 'data'})">Custom</button>
 ```
 ```
 
-**Step 2: Add visual companion section to brainstorming skill**
+**步骤 2：将视觉伴侣部分添加到头脑风暴技能**
 
-Add after "Key Principles" in `skills/brainstorming/SKILL.md`:
+在 `skills/brainstorming/SKILL.md` 中的 "Key Principles" 之后添加：
 
 ```markdown
 
-## Visual Companion (Optional)
+## 视觉伴侣（可选）
 
-When brainstorming involves visual elements - UI mockups, wireframes, interactive prototypes - use the browser-based visual companion.
+当头脑风暴涉及视觉元素——UI 模型、线框、交互式原型——时，使用基于浏览器的视觉伴侣。
 
-**When to use:**
-- Presenting UI/UX options that benefit from visual comparison
-- Showing wireframes or layout options
-- Gathering structured feedback (ratings, forms)
-- Prototyping click interactions
+**何时使用：**
+- 呈现受益于视觉比较的 UI/UX 选项
+- 展示线框或布局选项
+- 收集结构化反馈（评分、表单）
+- 原型化点击交互
 
-**How it works:**
-1. Start the server as a background job
-2. Tell user to open http://localhost:3333
-3. Write HTML to `/tmp/brainstorm/screen.html` (auto-refreshes)
-4. Check background task output for user interactions
+**工作原理：**
+1. 将服务器作为后台作业启动
+2. 告诉用户打开 http://localhost:3333
+3. 将 HTML 写入 `/tmp/brainstorm/screen.html`（自动刷新）
+4. 检查后台任务输出以获取用户交互
 
-The terminal remains the primary conversation interface. The browser is a visual aid.
+终端保持为主要会话界面。浏览器是视觉辅助工具。
 
-**Reference:** See `visual-companion.md` in this skill directory for HTML patterns and API details.
+**参考：** 参见此技能目录中的 `visual-companion.md` 了解 HTML 模式和 API 详情。
 ```
 
-**Step 3: Verify the edits**
+**步骤 3：验证编辑**
 
-Run: `grep -A5 "Visual Companion" skills/brainstorming/SKILL.md`
-Expected: Shows the new section
+运行：`grep -A5 "Visual Companion" skills/brainstorming/SKILL.md`
+预期：显示新部分
 
-**Step 4: Commit**
+**步骤 4：提交**
 
 ```bash
 git add skills/brainstorming/
@@ -530,23 +530,23 @@ git commit -m "feat: add visual companion to brainstorming skill"
 
 ---
 
-## Task 5: Add Server to Plugin Ignore (Optional Cleanup)
+## 任务 5：将服务器添加到插件忽略（可选清理）
 
-**Files:**
-- Check if `.gitignore` needs node_modules exclusion for lib/brainstorm-server
+**文件：**
+- 检查 `.gitignore` 是否需要对 lib/brainstorm-server 的 node_modules 排除
 
-**Step 1: Check current gitignore**
+**步骤 1：检查当前 gitignore**
 
-Run: `cat .gitignore 2>/dev/null || echo "No .gitignore"`
+运行：`cat .gitignore 2>/dev/null || echo "No .gitignore"`
 
-**Step 2: Add node_modules if needed**
+**步骤 2：如有需要添加 node_modules**
 
-If not already present, add:
+如果尚未存在，添加：
 ```
 lib/brainstorm-server/node_modules/
 ```
 
-**Step 3: Commit if changed**
+**步骤 3：如有更改则提交**
 
 ```bash
 git add .gitignore
@@ -555,17 +555,17 @@ git commit -m "chore: ignore brainstorm-server node_modules"
 
 ---
 
-## Summary
+## 总结
 
-After completing all tasks:
+完成所有任务后：
 
-1. **Server** at `lib/brainstorm-server/` - Node.js server that watches HTML file and relays events
-2. **Helper library** auto-injected - captures clicks, forms, inputs
-3. **Tests** at `tests/brainstorm-server/` - verifies server behavior
-4. **Brainstorming skill** updated with visual companion section and `visual-companion.md` reference doc
+1. **服务器** 在 `lib/brainstorm-server/` — 监视 HTML 文件并转发事件的 Node.js 服务器
+2. **Helper 库** 自动注入 — 捕获点击、表单、输入
+3. **测试** 在 `tests/brainstorm-server/` — 验证服务器行为
+4. **头脑风暴技能** 已更新，包含视觉伴侣部分和 `visual-companion.md` 参考文档
 
-**To use:**
-1. Start server as background job: `node lib/brainstorm-server/index.js &`
-2. Tell user to open `http://localhost:3333`
-3. Write HTML to `/tmp/brainstorm/screen.html`
-4. Check task output for user events
+**使用方法：**
+1. 作为后台作业启动服务器：`node lib/brainstorm-server/index.js &`
+2. 告诉用户打开 `http://localhost:3333`
+3. 将 HTML 写入 `/tmp/brainstorm/screen.html`
+4. 检查任务输出以获取用户事件

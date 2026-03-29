@@ -1,48 +1,48 @@
-# Visual Brainstorming Refactor Implementation Plan
+# 视觉头脑风暴重构实现计划
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Refactor visual brainstorming from blocking TUI feedback model to non-blocking "Browser Displays, Terminal Commands" architecture.
+**目标：** 将视觉头脑风暴从阻塞式 TUI 反馈模型重构为非阻塞的"浏览器显示、终端命令"架构。
 
-**Architecture:** Browser becomes an interactive display; terminal stays the conversation channel. Server writes user events to a per-screen `.events` file that Claude reads on its next turn. Eliminates `wait-for-feedback.sh` and all `TaskOutput` blocking.
+**架构：** 浏览器成为交互式显示；终端保持会话通道。服务器将用户事件写入每个屏幕的 `.events` 文件，Claude 在下一轮读取它。消除 `wait-for-feedback.sh` 和所有 `TaskOutput` 阻塞。
 
-**Tech Stack:** Node.js (Express, ws, chokidar), vanilla HTML/CSS/JS
+**技术栈：** Node.js (Express, ws, chokidar), vanilla HTML/CSS/JS
 
-**Spec:** `docs/superpowers/specs/2026-02-19-visual-brainstorming-refactor-design.md`
-
----
-
-## File Map
-
-| File | Action | Responsibility |
-|------|--------|---------------|
-| `lib/brainstorm-server/index.js` | Modify | Server: add `.events` file writing, clear on new screen, replace `wrapInFrame` |
-| `lib/brainstorm-server/frame-template.html` | Modify | Template: remove feedback footer, add content placeholder + selection indicator |
-| `lib/brainstorm-server/helper.js` | Modify | Client JS: remove send/feedback functions, narrow to click capture + indicator updates |
-| `lib/brainstorm-server/wait-for-feedback.sh` | Delete | No longer needed |
-| `skills/brainstorming/visual-companion.md` | Modify | Skill instructions: rewrite loop to non-blocking flow |
-| `tests/brainstorm-server/server.test.js` | Modify | Tests: update for new template structure and helper.js API |
+**规范：** `docs/superpowers/specs/2026-02-19-visual-brainstorming-refactor-design.md`
 
 ---
 
-## Chunk 1: Server, Template, Client, Tests, Skill
+## 文件映射
 
-### Task 1: Update `frame-template.html`
+| 文件 | 操作 | 职责 |
+|------|------|------|
+| `lib/brainstorm-server/index.js` | 修改 | 服务器：添加 `.events` 文件写入、新屏幕时清除、替换 `wrapInFrame` |
+| `lib/brainstorm-server/frame-template.html` | 修改 | 模板：移除反馈页脚、添加内容占位符 + 选择指示器 |
+| `lib/brainstorm-server/helper.js` | 修改 | 客户端 JS：移除 send/feedback 函数、收窄到点击捕获 + 指示器更新 |
+| `lib/brainstorm-server/wait-for-feedback.sh` | 删除 | 不再需要 |
+| `skills/brainstorming/visual-companion.md` | 修改 | 技能说明：重写循环为非阻塞流程 |
+| `tests/brainstorm-server/server.test.js` | 修改 | 测试：为新模板结构和 helper.js API 更新测试 |
 
-**Files:**
-- Modify: `lib/brainstorm-server/frame-template.html`
+---
 
-- [ ] **Step 1: Remove the feedback footer HTML**
+## 块 1：服务器、模板、客户端、测试、技能
 
-Replace the feedback-footer div (lines 227-233) with a selection indicator bar:
+### 任务 1：更新 `frame-template.html`
+
+**文件：**
+- 修改：`lib/brainstorm-server/frame-template.html`
+
+- [ ] **步骤 1：移除反馈页脚 HTML**
+
+将 feedback-footer div（第 227-233 行）替换为选择指示器栏：
 
 ```html
   <div class="indicator-bar">
-    <span id="indicator-text">Click an option above, then return to the terminal</span>
+    <span id="indicator-text">点击上方选项，然后返回终端</span>
   </div>
 ```
 
-Also replace the default content inside `#claude-content` (lines 220-223) with the content placeholder:
+同时将 `#claude-content` 内的默认内容（第 220-223 行）替换为内容占位符：
 
 ```html
     <div id="claude-content">
@@ -50,11 +50,11 @@ Also replace the default content inside `#claude-content` (lines 220-223) with t
     </div>
 ```
 
-- [ ] **Step 2: Replace feedback footer CSS with indicator bar CSS**
+- [ ] **步骤 2：用指示器栏 CSS 替换反馈页脚 CSS**
 
-Remove the `.feedback-footer`, `.feedback-footer label`, `.feedback-row`, and the textarea/button styles within `.feedback-footer` (lines 82-112).
+移除 `.feedback-footer`、`.feedback-footer label`、`.feedback-row` 以及 `.feedback-footer` 内的 textarea/button 样式（第 82-112 行）。
 
-Add indicator bar CSS:
+添加指示器栏 CSS：
 
 ```css
     .indicator-bar {
@@ -74,15 +74,15 @@ Add indicator bar CSS:
     }
 ```
 
-- [ ] **Step 3: Verify template renders**
+- [ ] **步骤 3：验证模板渲染**
 
-Run the test suite to check the template still loads:
+运行测试套件检查模板是否仍能加载：
 ```bash
 cd /Users/drewritter/prime-rad/superpowers && node tests/brainstorm-server/server.test.js
 ```
-Expected: Tests 1-5 should still pass. Tests 6-8 may fail (expected — they assert old structure).
+预期：测试 1-5 应仍然通过。测试 6-8 可能失败（预期 —— 它们断言旧结构）。
 
-- [ ] **Step 4: Commit**
+- [ ] **步骤 4：提交**
 
 ```bash
 git add lib/brainstorm-server/frame-template.html
@@ -91,14 +91,14 @@ git commit -m "Replace feedback footer with selection indicator bar in brainstor
 
 ---
 
-### Task 2: Update `index.js` — content injection and `.events` file
+### 任务 2：更新 `index.js` — 内容注入和 `.events` 文件
 
-**Files:**
-- Modify: `lib/brainstorm-server/index.js`
+**文件：**
+- 修改：`lib/brainstorm-server/index.js`
 
-- [ ] **Step 1: Write failing test for `.events` file writing**
+- [ ] **步骤 1：编写失败的测试用于 `.events` 文件写入**
 
-Add to `tests/brainstorm-server/server.test.js` after Test 4 area — a new test that sends a WebSocket event with a `choice` field and verifies `.events` file is written:
+在 `tests/brainstorm-server/server.test.js` 中 Test 4 区域之后添加 —— 一个发送带 `choice` 字段的 WebSocket 事件并验证 `.events` 文件被写入的新测试：
 
 ```javascript
     // Test: Choice events written to .events file
@@ -119,16 +119,16 @@ Add to `tests/brainstorm-server/server.test.js` after Test 4 area — a new test
     console.log('  PASS');
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **步骤 2：运行测试验证它失败**
 
 ```bash
 cd /Users/drewritter/prime-rad/superpowers && node tests/brainstorm-server/server.test.js
 ```
-Expected: New test FAILS — `.events` file doesn't exist yet.
+预期：新测试失败 — `.events` 文件尚不存在。
 
-- [ ] **Step 3: Write failing test for `.events` file clearing on new screen**
+- [ ] **步骤 3：编写失败的测试用于 `.events` 文件在新屏幕时清除**
 
-Add another test:
+添加另一个测试：
 
 ```javascript
     // Test: .events cleared on new screen
@@ -141,16 +141,16 @@ Add another test:
     console.log('  PASS');
 ```
 
-- [ ] **Step 4: Run test to verify it fails**
+- [ ] **步骤 4：运行测试验证它失败**
 
 ```bash
 cd /Users/drewritter/prime-rad/superpowers && node tests/brainstorm-server/server.test.js
 ```
-Expected: New test FAILS — `.events` not cleared on screen push.
+预期：新测试失败 — `.events` 在屏幕推送时未清除。
 
-- [ ] **Step 5: Implement `.events` file writing in `index.js`**
+- [ ] **步骤 5：在 `index.js` 中实现 `.events` 文件写入**
 
-In the WebSocket `message` handler (line 74-77 of `index.js`), after the `console.log`, add:
+在 WebSocket `message` 处理器（第 74-77 行）中，在 `console.log` 之后添加：
 
 ```javascript
     // Write user events to .events file for Claude to read
@@ -160,7 +160,7 @@ In the WebSocket `message` handler (line 74-77 of `index.js`), after the `consol
     }
 ```
 
-In the chokidar `add` handler (line 104-111), add `.events` clearing:
+在 chokidar `add` 处理器（第 104-111 行）中，添加 `.events` 清除：
 
 ```javascript
     if (filePath.endsWith('.html')) {
@@ -173,9 +173,9 @@ In the chokidar `add` handler (line 104-111), add `.events` clearing:
     }
 ```
 
-- [ ] **Step 6: Replace `wrapInFrame` with comment placeholder injection**
+- [ ] **步骤 6：用注释占位符注入替换 `wrapInFrame`**
 
-Replace the `wrapInFrame` function (lines 27-32 of `index.js`):
+替换 `wrapInFrame` 函数（第 27-32 行）：
 
 ```javascript
 function wrapInFrame(content) {
@@ -183,14 +183,14 @@ function wrapInFrame(content) {
 }
 ```
 
-- [ ] **Step 7: Run all tests**
+- [ ] **步骤 7：运行所有测试**
 
 ```bash
 cd /Users/drewritter/prime-rad/superpowers && node tests/brainstorm-server/server.test.js
 ```
-Expected: New `.events` tests PASS. Existing tests may still have failures from old assertions (fixed in Task 4).
+预期：新的 `.events` 测试通过。现有测试可能仍有来自旧断言的失败（在任务 4 中修复）。
 
-- [ ] **Step 8: Commit**
+- [ ] **步骤 8：提交**
 
 ```bash
 git add lib/brainstorm-server/index.js tests/brainstorm-server/server.test.js
@@ -199,30 +199,30 @@ git commit -m "Add .events file writing and comment-based content injection to b
 
 ---
 
-### Task 3: Simplify `helper.js`
+### 任务 3：简化 `helper.js`
 
-**Files:**
-- Modify: `lib/brainstorm-server/helper.js`
+**文件：**
+- 修改：`lib/brainstorm-server/helper.js`
 
-- [ ] **Step 1: Remove `sendToClaude` function**
+- [ ] **步骤 1：移除 `sendToClaude` 函数**
 
-Delete the `sendToClaude` function (lines 92-106) — the function body and the page takeover HTML.
+删除 `sendToClaude` 函数（第 92-106 行）—— 函数体和页面接管 HTML。
 
-- [ ] **Step 2: Remove `window.send` function**
+- [ ] **步骤 2：移除 `window.send` 函数**
 
-Delete the `window.send` function (lines 120-129) — was tied to the removed Send button.
+删除 `window.send` 函数（第 120-129 行）—— 与已移除的 Send 按钮关联。
 
-- [ ] **Step 3: Remove form submission and input change handlers**
+- [ ] **步骤 3：移除表单提交和输入更改处理器**
 
-Delete the form submission handler (lines 57-71) and the input change handler (lines 73-89) including the `inputTimeout` variable.
+删除表单提交处理器（第 57-71 行）和输入更改处理器（第 73-89 行），包括 `inputTimeout` 变量。
 
-- [ ] **Step 4: Remove `pageshow` event listener**
+- [ ] **步骤 4：移除 `pageshow` 事件监听器**
 
-Delete the `pageshow` listener we added earlier (no textarea to clear anymore).
+删除我们之前添加的 `pageshow` 监听器（不再有 textarea 可清除）。
 
-- [ ] **Step 5: Narrow click handler to `[data-choice]` only**
+- [ ] **步骤 5：将点击处理器收窄到只处理 `[data-choice]`**
 
-Replace the click handler (lines 36-55) with a narrower version:
+替换点击处理器（第 36-55 行）为更窄的版本：
 
 ```javascript
   // Capture clicks on choice elements
@@ -239,9 +239,9 @@ Replace the click handler (lines 36-55) with a narrower version:
   });
 ```
 
-- [ ] **Step 6: Add indicator bar update on choice click**
+- [ ] **步骤 6：在选择点击时添加指示器栏更新**
 
-After the `sendEvent` call in the click handler, add:
+在点击处理器中的 `sendEvent` 调用之后添加：
 
 ```javascript
     // Update indicator bar
@@ -252,9 +252,9 @@ After the `sendEvent` call in the click handler, add:
     }
 ```
 
-- [ ] **Step 7: Remove `sendToClaude` from `window.brainstorm` API**
+- [ ] **步骤 7：从 `window.brainstorm` API 中移除 `sendToClaude`**
 
-Update the `window.brainstorm` object (lines 132-136) to remove `sendToClaude`:
+更新 `window.brainstorm` 对象（第 132-136 行）以移除 `sendToClaude`：
 
 ```javascript
   window.brainstorm = {
@@ -263,13 +263,13 @@ Update the `window.brainstorm` object (lines 132-136) to remove `sendToClaude`:
   };
 ```
 
-- [ ] **Step 8: Run tests**
+- [ ] **步骤 8：运行测试**
 
 ```bash
 cd /Users/drewritter/prime-rad/superpowers && node tests/brainstorm-server/server.test.js
 ```
 
-- [ ] **Step 9: Commit**
+- [ ] **步骤 9：提交**
 
 ```bash
 git add lib/brainstorm-server/helper.js
@@ -278,39 +278,39 @@ git commit -m "Simplify helper.js: remove feedback functions, narrow to choice c
 
 ---
 
-### Task 4: Update tests for new structure
+### 任务 4：为新结构更新测试
 
-**Files:**
-- Modify: `tests/brainstorm-server/server.test.js`
+**文件：**
+- 修改：`tests/brainstorm-server/server.test.js`
 
-**Note:** Line references below are from the _original_ file. Task 2 inserted new tests earlier in the file, so actual line numbers will be shifted. Find tests by their `console.log` labels (e.g., "Test 5:", "Test 6:").
+**注意：** 以下行号引用来自 _原始_ 文件。任务 2 在文件中更早插入新测试，因此实际行号会偏移。通过它们的 `console.log` 标签查找测试（例如 "Test 5:", "Test 6:")。
 
-- [ ] **Step 1: Update Test 5 (full document assertion)**
+- [ ] **步骤 1：更新 Test 5（完整文档断言）**
 
-Find the Test 5 assertion `!fullRes.body.includes('feedback-footer')`. Change it to: Full documents should NOT have the indicator bar either (they're served as-is):
+找到 Test 5 断言 `!fullRes.body.includes('feedback-footer')`。将其更改为：完整文档也不应该有指示器栏（它们按原样提供）：
 
 ```javascript
     assert(!fullRes.body.includes('indicator-bar') || fullDoc.includes('indicator-bar'),
       'Should not wrap full documents in frame template');
 ```
 
-- [ ] **Step 2: Update Test 6 (fragment wrapping)**
+- [ ] **步骤 2：更新 Test 6（片段包装）**
 
-Line 125: Replace `feedback-footer` assertion with indicator bar assertion:
+第 125 行：将 `feedback-footer` 断言替换为指示器栏断言：
 
 ```javascript
     assert(fragRes.body.includes('indicator-bar'), 'Fragment should get indicator bar from frame');
 ```
 
-Also verify content placeholder was replaced (fragment content appears, placeholder comment doesn't):
+同时验证内容占位符被替换（片段内容出现，占位符注释不出现）：
 
 ```javascript
     assert(!fragRes.body.includes('<!-- CONTENT -->'), 'Content placeholder should be replaced');
 ```
 
-- [ ] **Step 3: Update Test 7 (helper.js API)**
+- [ ] **步骤 3：更新 Test 7（helper.js API）**
 
-Lines 140-142: Update assertions to reflect the new API surface:
+第 140-142 行：更新断言以反映新的 API 表面：
 
 ```javascript
     assert(helperContent.includes('toggleSelect'), 'helper.js should define toggleSelect');
@@ -320,9 +320,9 @@ Lines 140-142: Update assertions to reflect the new API surface:
     assert(!helperContent.includes('sendToClaude'), 'helper.js should not contain sendToClaude');
 ```
 
-- [ ] **Step 4: Replace Test 8 (sendToClaude theming) with indicator bar test**
+- [ ] **步骤 4：用指示器栏测试替换 Test 8（sendToClaude 主题）**
 
-Replace Test 8 (lines 145-149) — `sendToClaude` no longer exists. Test the indicator bar instead:
+替换 Test 8（第 145-149 行）—— `sendToClaude` 不再存在。改为测试指示器栏：
 
 ```javascript
     // Test 8: Indicator bar uses CSS variables (theme support)
@@ -335,14 +335,14 @@ Replace Test 8 (lines 145-149) — `sendToClaude` no longer exists. Test the ind
     console.log('  PASS');
 ```
 
-- [ ] **Step 5: Run full test suite**
+- [ ] **步骤 5：运行完整测试套件**
 
 ```bash
 cd /Users/drewritter/prime-rad/superpowers && node tests/brainstorm-server/server.test.js
 ```
-Expected: ALL tests PASS.
+预期：所有测试通过。
 
-- [ ] **Step 6: Commit**
+- [ ] **步骤 6：提交**
 
 ```bash
 git add tests/brainstorm-server/server.test.js
@@ -351,34 +351,34 @@ git commit -m "Update brainstorm server tests for new template structure and hel
 
 ---
 
-### Task 5: Delete `wait-for-feedback.sh`
+### 任务 5：删除 `wait-for-feedback.sh`
 
-**Files:**
-- Delete: `lib/brainstorm-server/wait-for-feedback.sh`
+**文件：**
+- 删除：`lib/brainstorm-server/wait-for-feedback.sh`
 
-- [ ] **Step 1: Verify no other files import or reference `wait-for-feedback.sh`**
+- [ ] **步骤 1：验证没有其他文件导入或引用 `wait-for-feedback.sh`**
 
-Search the codebase:
+搜索代码库：
 ```bash
 grep -r "wait-for-feedback" /Users/drewritter/prime-rad/superpowers/ --include="*.js" --include="*.md" --include="*.sh" --include="*.json"
 ```
 
-Expected references: only `visual-companion.md` (rewritten in Task 6) and possibly release notes (historical, leave as-is).
+预期引用：只有 `visual-companion.md`（在任务 6 中重写）和可能的发布说明（历史记录，按原样保留）。
 
-- [ ] **Step 2: Delete the file**
+- [ ] **步骤 2：删除文件**
 
 ```bash
 rm lib/brainstorm-server/wait-for-feedback.sh
 ```
 
-- [ ] **Step 3: Run tests to confirm nothing breaks**
+- [ ] **步骤 3：运行测试确认没有破坏**
 
 ```bash
 cd /Users/drewritter/prime-rad/superpowers && node tests/brainstorm-server/server.test.js
 ```
-Expected: All tests PASS (no test referenced this file).
+预期：所有测试通过（没有测试引用此文件）。
 
-- [ ] **Step 4: Commit**
+- [ ] **步骤 4：提交**
 
 ```bash
 git add -u lib/brainstorm-server/wait-for-feedback.sh
@@ -387,63 +387,63 @@ git commit -m "Delete wait-for-feedback.sh: replaced by .events file"
 
 ---
 
-### Task 6: Rewrite `visual-companion.md`
+### 任务 6：重写 `visual-companion.md`
 
-**Files:**
-- Modify: `skills/brainstorming/visual-companion.md`
+**文件：**
+- 修改：`skills/brainstorming/visual-companion.md`
 
-- [ ] **Step 1: Update "How It Works" description (line 18)**
+- [ ] **步骤 1：更新 "How It Works" 描述（第 18 行）**
 
-Replace the sentence about receiving feedback "as JSON" with:
-
-```markdown
-The server watches a directory for HTML files and serves the newest one to the browser. You write HTML content, the user sees it in their browser and can click to select options. Selections are recorded to a `.events` file that you read on your next turn.
-```
-
-- [ ] **Step 2: Update fragment description (line 20)**
-
-Remove "feedback footer" from the description of what the frame template provides:
+将关于接收反馈 "as JSON" 的句子替换为：
 
 ```markdown
-**Content fragments vs full documents:** If your HTML file starts with `<!DOCTYPE` or `<html`, the server serves it as-is (just injects the helper script). Otherwise, the server automatically wraps your content in the frame template — adding the header, CSS theme, selection indicator, and all interactive infrastructure. **Write content fragments by default.** Only write full documents when you need complete control over the page.
+服务器监视目录中的 HTML 文件并将最新的一个提供给浏览器。你编写 HTML 内容，用户在浏览器中看到它并可以点击选择选项。选择被记录到 `.events` 文件，你可以在下一轮读取它。
 ```
 
-- [ ] **Step 3: Rewrite "The Loop" section (lines 36-61)**
+- [ ] **步骤 2：更新片段描述（第 20 行）**
 
-Replace the entire "The Loop" section with:
+从帧模板提供的内容描述中移除 "feedback footer"：
+
+```markdown
+**内容片段 vs 完整文档：** 如果你的 HTML 文件以 `<!DOCTYPE` 或 `<html` 开头，服务器按原样提供服务（仅注入 helper 脚本）。否则，服务器会自动将你的内容包装在帧模板中 —— 添加页眉、CSS 主题、选择指示器和所有交互式基础设施。**默认编写内容片段。** 只有当你需要完全控制页面时才编写完整文档。
+```
+
+- [ ] **步骤 3：重写 "The Loop" 部分（第 36-61 行）**
+
+用以下内容替换整个 "The Loop" 部分：
 
 ```markdown
 ## The Loop
 
-1. **Write HTML** to a new file in `screen_dir`:
-   - Use semantic filenames: `platform.html`, `visual-style.html`, `layout.html`
-   - **Never reuse filenames** — each screen gets a fresh file
-   - Use Write tool — **never use cat/heredoc** (dumps noise into terminal)
-   - Server automatically serves the newest file
+1. **编写 HTML** 到 `screen_dir` 中的新文件：
+   - 使用语义文件名：`platform.html`、`visual-style.html`、`layout.html`
+   - **不要重用文件名** — 每个屏幕获得一个新鲜文件
+   - 使用 Write 工具 — **不要使用 cat/heredoc**（会将噪声倒入终端）
+   - 服务器自动提供最新文件
 
-2. **Tell user what to expect and end your turn:**
-   - Remind them of the URL (every step, not just first)
-   - Give a brief text summary of what's on screen (e.g., "Showing 3 layout options for the homepage")
-   - Ask them to respond in the terminal: "Take a look and let me know what you think. Click to select an option if you'd like."
+2. **告诉用户期望什么并结束你的回合：**
+   - 提醒他们 URL（每一步，不只是第一步）
+   - 简要总结屏幕上显示的内容（例如，"显示主页的 3 个布局选项"）
+   - 让他们在终端中回复："看一下然后告诉我你的想法。如果你愿意，点击选择一个选项。"
 
-3. **On your next turn** — after the user responds in the terminal:
-   - Read `$SCREEN_DIR/.events` if it exists — this contains the user's browser interactions (clicks, selections) as JSON lines
-   - Merge with the user's terminal text to get the full picture
-   - The terminal message is the primary feedback; `.events` provides structured interaction data
+3. **在你的下一轮** — 用户在终端回复后：
+   - 读取 `$SCREEN_DIR/.events`（如果存在）—— 这包含用户的浏览器交互（点击、选择）作为 JSON 行
+   - 与用户的终端文本合并以获得完整画面
+   - 终端消息是主要反馈；`.events` 提供结构化交互数据
 
-4. **Iterate or advance** — if feedback changes current screen, write a new file (e.g., `layout-v2.html`). Only move to the next question when the current step is validated.
+4. **迭代或推进** — 如果反馈更改当前屏幕，编写一个新文件（例如 `layout-v2.html`）。只有当当前步骤被验证后才进入下一个问题。
 
-5. Repeat until done.
+5. 重复直到完成。
 ```
 
-- [ ] **Step 4: Replace "User Feedback Format" section (lines 165-174)**
+- [ ] **步骤 4：替换 "User Feedback Format" 部分（第 165-174 行）**
 
-Replace with:
+用以下内容替换：
 
 ```markdown
-## Browser Events Format
+## 浏览器事件格式
 
-When the user clicks options in the browser, their interactions are recorded to `$SCREEN_DIR/.events` (one JSON object per line). The file is cleared automatically when you push a new screen.
+当用户在浏览器中点击选项时，它们的交互被记录到 `$SCREEN_DIR/.events`（每行一个 JSON 对象）。当你推送新屏幕时文件自动清除。
 
 ```jsonl
 {"type":"click","choice":"a","text":"Option A - Simple Layout","timestamp":1706000101}
@@ -451,22 +451,22 @@ When the user clicks options in the browser, their interactions are recorded to 
 {"type":"click","choice":"b","text":"Option B - Hybrid","timestamp":1706000115}
 ```
 
-The full event stream shows the user's exploration path — they may click multiple options before settling. The last `choice` event is typically the final selection, but the pattern of clicks can reveal hesitation or preferences worth asking about.
+完整的事件流显示用户的探索路径 —— 它们可能在确定之前点击多个选项。最后的 `choice` 事件通常是最终选择，但点击模式可以揭示犹豫或值得询问的偏好。
 
-If `.events` doesn't exist, the user didn't interact with the browser — use only their terminal text.
+如果 `.events` 不存在，用户没有与浏览器交互 —— 只使用他们的终端文本。
 ```
 
-- [ ] **Step 5: Update "Writing Content Fragments" description (line 65)**
+- [ ] **步骤 5：更新 "Writing Content Fragments" 描述（第 65 行）**
 
-Remove "feedback footer" reference:
+移除 "feedback footer" 引用：
 
 ```markdown
-Write just the content that goes inside the page. The server wraps it in the frame template automatically (header, theme CSS, selection indicator, and all interactive infrastructure).
+只编写页面内部的内容。服务器会自动将其包装在帧模板中（页眉、主题 CSS、选择指示器和所有交互式基础设施）。
 ```
 
-- [ ] **Step 6: Update Reference section (lines 200-203)**
+- [ ] **步骤 6：更新 Reference 部分（第 200-203 行）**
 
-Remove the helper.js reference description about "JS API" — the API is now minimal. Keep the path reference:
+移除关于 "JS API" 的 helper.js 引用描述 —— API 现在很简单。保留路径引用：
 
 ```markdown
 ## Reference
@@ -475,7 +475,7 @@ Remove the helper.js reference description about "JS API" — the API is now min
 - Helper script (client-side): `${CLAUDE_PLUGIN_ROOT}/lib/brainstorm-server/helper.js`
 ```
 
-- [ ] **Step 7: Commit**
+- [ ] **步骤 7：提交**
 
 ```bash
 git add skills/brainstorming/visual-companion.md
@@ -484,38 +484,38 @@ git commit -m "Rewrite visual-companion.md for non-blocking browser-displays-ter
 
 ---
 
-### Task 7: Final verification
+### 任务 7：最终验证
 
-- [ ] **Step 1: Run full test suite**
+- [ ] **步骤 1：运行完整测试套件**
 
 ```bash
 cd /Users/drewritter/prime-rad/superpowers && node tests/brainstorm-server/server.test.js
 ```
-Expected: ALL tests PASS.
+预期：所有测试通过。
 
-- [ ] **Step 2: Manual smoke test**
+- [ ] **步骤 2：手动烟雾测试**
 
-Start the server manually and verify the flow works end-to-end:
+手动启动服务器并验证流程端到端工作：
 
 ```bash
 cd /Users/drewritter/prime-rad/superpowers && lib/brainstorm-server/start-server.sh --project-dir /tmp/brainstorm-smoke-test
 ```
 
-Write a test fragment, open in browser, click an option, verify `.events` file is written, verify indicator bar updates. Then stop the server:
+编写测试片段、在浏览器中打开、点击选项、验证 `.events` 文件被写入、验证指示器栏更新。然后停止服务器：
 
 ```bash
 lib/brainstorm-server/stop-server.sh <screen_dir from start output>
 ```
 
-- [ ] **Step 3: Verify no stale references remain**
+- [ ] **步骤 3：验证没有陈旧引用保留**
 
 ```bash
 grep -r "wait-for-feedback\|sendToClaude\|feedback-footer\|send-to-claude\|TaskOutput.*block.*true" /Users/drewritter/prime-rad/superpowers/ --include="*.js" --include="*.md" --include="*.sh" --include="*.html" | grep -v node_modules | grep -v RELEASE-NOTES | grep -v "\.md:.*spec\|plan"
 ```
 
-Expected: No hits outside of release notes and the spec/plan docs (which are historical).
+预期：发布说明和 spec/plan 文档之外没有匹配（它们是历史记录）。
 
-- [ ] **Step 4: Final commit if any cleanup needed**
+- [ ] **步骤 4：如需清理则最终提交**
 
 ```bash
 git status
