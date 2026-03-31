@@ -243,7 +243,7 @@ search-conversations 支持多种模式和过滤器。运行 --help 查看详情
 **压缩示例：**
 ```markdown
 # ❌ 错误：冗长示例（42 词）
-你的搭档："在 React Router 之前我们如何处理认证错误？"
+搭档："在 React Router 之前我们如何处理认证错误？"
 你："我会搜索过去的对话中 React Router 认证模式。"
 [分配带搜索查询的子智能体："React Router 认证错误处理 401"]
 
